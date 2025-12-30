@@ -102,7 +102,71 @@ make -f Makefile.mingw
 
 This produces `CHUNIIO.dll` in the same folder. Copy it to your game directory (replace `chuniio.dll`).
 
-Client EXE (WPF) still needs MSBuild/Visual Studio to compile. If you prefer avoiding Visual Studio entirely, you can use the prebuilt release EXE, or we can refactor the project to SDK‑style so it builds with the .NET SDK.
+Client EXE (WPF) still needs MSBuild/Visual Studio to compile. If you prefer avoiding Visual Studio entirely, you can use the prebuilt release EXE, or we can refactor the project to SDK‑style so it builds with the .NET SDK. 
+
+### Webcam Air Notes (Experimental)
+
+The controller supports using a webcam for air note detection via motion tracking. Position your webcam above the play area looking down, and it will detect hand motion in 6 horizontal zones (matching the 6 IR sensors).
+
+**Setup:**
+1. Enable in [ChuniVController/ChuniVController/App.config](ChuniVController/ChuniVController/App.config):
+```xml
+<add key="WebcamEnabled" value="true" />
+<add key="WebcamDeviceIndex" value="0" />
+<add key="WebcamMotionThreshold" value="25" />
+```
+
+2. Mount your webcam above the play area, looking straight down
+3. Start the controller — a popup will confirm webcam detection started
+4. Wave hands over different zones to test detection
+
+**Settings:**
+- `WebcamDeviceIndex`: 0 for first webcam, 1 for second, etc.
+- `WebcamMotionThreshold`: 15-50 (lower = more sensitive, higher = less noise)
+- The frame is divided into 6 vertical zones; motion in each zone triggers the corresponding IR sensor
+
+**Notes:**
+- Uses AForge.NET for .NET Framework 4.7.2 compatibility
+- Simple motion detection via frame differencing (no ML/hand tracking)
+- Good lighting and clear background improve accuracy
+- For better precision, consider adding MediaPipe hand tracking later
+
+### Webcam IR Detection (Experimental)
+
+The controller now supports webcam-based hand detection for "air notes" (IR sensors) instead of using mouse/touch.
+
+**How it works:**
+- Captures webcam frames at ~30 FPS
+- Divides the frame into 6 horizontal zones matching the 6 IR sensors
+- Detects motion via frame differencing
+- Sends `IR_BLOCKED`/`IR_UNBLOCKED` messages when hands are detected
+
+**Configuration (App.config):**
+```xml
+<appSettings>
+  <add key="WebcamEnabled" value="true" />
+  <add key="WebcamDeviceIndex" value="0" />
+  <add key="WebcamMotionThreshold" value="25" />
+</appSettings>
+```
+
+- `WebcamEnabled`: Set to `true` to enable webcam IR detection
+- `WebcamDeviceIndex`: Webcam device index (0 for default camera)
+- `WebcamMotionThreshold`: Motion sensitivity threshold (15-50, lower = more sensitive)
+
+**Requirements:**
+- .NET Framework 4.8 (upgrade from 4.7.2)
+- OpenCvSharp4 4.5.5+ (installed via NuGet)
+- Webcam with sufficient frame rate
+
+**Build notes:**
+- Requires .NET Framework 4.8 Developer Pack: `winget install --id Microsoft.DotNet.Framework.DeveloperPack_4 --version 4.8.1`
+- After installing, rebuild the solution
+
+**Position the webcam:**
+- Mount webcam above your play area looking down
+- Ensure all 6 zones are visible in frame
+- Wave your hands over zones to test detection
 
 ### License
 

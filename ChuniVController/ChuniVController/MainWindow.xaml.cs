@@ -23,6 +23,7 @@ namespace ChuniVController
     public partial class MainWindow : Window
     {
         private readonly ChuniIO cio;
+        private WebcamIrService webcamIrService;
 
         private void handleRecv(ChuniIoMessage message)
         {
@@ -43,6 +44,29 @@ namespace ChuniVController
             if (!int.TryParse(portStr, out port)) port = 24864;
             cio = new ChuniIO(ip, port, handleRecv);
             cio.Start();
+
+            // Initialize webcam IR service if enabled
+            bool webcamEnabled = false;
+            bool.TryParse(ConfigurationManager.AppSettings["WebcamEnabled"], out webcamEnabled);
+            
+            if (webcamEnabled)
+            {
+                int deviceIndex = 0;
+                int.TryParse(ConfigurationManager.AppSettings["WebcamDeviceIndex"], out deviceIndex);
+                
+                double motionThreshold = 25.0;
+                double.TryParse(ConfigurationManager.AppSettings["WebcamMotionThreshold"], out motionThreshold);
+                
+                webcamIrService = new WebcamIrService(cio, deviceIndex, motionThreshold);
+                if (webcamIrService.Start())
+                {
+                    MessageBox.Show("Webcam IR detection started successfully!", "Webcam", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show("Failed to start webcam. Check device index and permissions.", "Webcam Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
 
             HotkeyManager.Current.AddOrReplace("Lock", Key.L, ModifierKeys.Alt, ToggleLockWindow);
             HotkeyManager.Current.AddOrReplace("Opacity", Key.O, ModifierKeys.Alt, ToggleFullOpacity);
@@ -104,6 +128,7 @@ namespace ChuniVController
 
         protected override void OnClosed(EventArgs e)
         {
+            webcamIrService?.Stop();
             cio.Stop();
             base.OnClosed(e);
         }
