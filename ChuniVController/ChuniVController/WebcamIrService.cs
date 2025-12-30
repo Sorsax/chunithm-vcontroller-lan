@@ -16,6 +16,7 @@ namespace ChuniVController
         private readonly ChuniIO _io;
         private readonly int _deviceIndex;
         private readonly int _motionThreshold;
+        private readonly double _bottomDeadzonePercent;
         private VideoCaptureDevice _videoSource;
         private Bitmap _previousFrame;
         private bool _running;
@@ -23,11 +24,12 @@ namespace ChuniVController
         // Track the state of each IR sensor (0-5)
         private bool[] _irBlocked = new bool[6];
         
-        public WebcamIrService(ChuniIO io, int deviceIndex = 0, double motionThreshold = 25.0)
+        public WebcamIrService(ChuniIO io, int deviceIndex = 0, double motionThreshold = 20.0, double bottomDeadzonePercent = 15.0)
         {
             _io = io;
             _deviceIndex = deviceIndex;
             _motionThreshold = (int)motionThreshold;
+            _bottomDeadzonePercent = bottomDeadzonePercent;
         }
 
         public bool Start()
@@ -154,6 +156,10 @@ namespace ChuniVController
             int width = grayCurrent.Width;
             int height = grayCurrent.Height;
             int zoneWidth = width / 6;
+            
+            // Calculate deadzone (bottom X% of frame)
+            int deadzoneHeight = (int)(height * _bottomDeadzonePercent / 100.0);
+            int activeHeight = height - deadzoneHeight;
 
             BitmapData prevData = _previousFrame.LockBits(
                 new Rectangle(0, 0, _previousFrame.Width, _previousFrame.Height),
@@ -178,9 +184,10 @@ namespace ChuniVController
                         int startX = zone * zoneWidth;
                         int endX = (zone == 5) ? width : (zone + 1) * zoneWidth;
                         int motionPixels = 0;
-                        int totalPixels = (endX - startX) * height;
+                        int totalPixels = (endX - startX) * activeHeight;
 
-                        for (int y = 0; y < height; y++)
+                        // Only process pixels above the deadzone
+                        for (int y = 0; y < activeHeight; y++)
                         {
                             for (int x = startX; x < endX; x++)
                             {
@@ -197,7 +204,7 @@ namespace ChuniVController
                         }
 
                         double motionPercent = (double)motionPixels / totalPixels * 100.0;
-                        bool shouldBlock = motionPercent > 2.0;
+                        bool shouldBlock = motionPercent > 1.5;
 
                         if (shouldBlock && !_irBlocked[zone])
                         {

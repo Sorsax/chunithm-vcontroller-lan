@@ -54,10 +54,13 @@ namespace ChuniVController
                 int deviceIndex = 0;
                 int.TryParse(ConfigurationManager.AppSettings["WebcamDeviceIndex"], out deviceIndex);
                 
-                double motionThreshold = 25.0;
+                double motionThreshold = 20.0;
                 double.TryParse(ConfigurationManager.AppSettings["WebcamMotionThreshold"], out motionThreshold);
                 
-                webcamIrService = new WebcamIrService(cio, deviceIndex, motionThreshold);
+                double bottomDeadzone = 15.0;
+                double.TryParse(ConfigurationManager.AppSettings["WebcamBottomDeadzonePercent"], out bottomDeadzone);
+                
+                webcamIrService = new WebcamIrService(cio, deviceIndex, motionThreshold, bottomDeadzone);
                 if (webcamIrService.Start())
                 {
                     MessageBox.Show("Webcam IR detection started successfully!", "Webcam", MessageBoxButton.OK, MessageBoxImage.Information);
