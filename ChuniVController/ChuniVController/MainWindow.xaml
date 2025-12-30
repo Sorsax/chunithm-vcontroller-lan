@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:ChuniVController"
         mc:Ignorable="d"
         Loaded="OnLoad"
-        Title="ChuniController" Topmost="True" ShowActivated="False" ResizeMode="NoResize" SizeToContent="WidthAndHeight"  Opacity="{Binding Value, ElementName=OpacitySlider}" AllowsTransparency="True" WindowStyle="None" BorderBrush="#ccc" BorderThickness="2" MouseDown="DoMove">
+        Title="ChuniVController Plus" Topmost="True" ShowActivated="False" ResizeMode="NoResize" SizeToContent="WidthAndHeight"  Opacity="{Binding Value, ElementName=OpacitySlider}" AllowsTransparency="True" WindowStyle="None" BorderBrush="#ccc" BorderThickness="2" MouseDown="DoMove">
     <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
 
         
