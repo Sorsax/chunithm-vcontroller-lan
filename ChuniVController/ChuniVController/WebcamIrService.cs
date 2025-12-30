@@ -156,7 +156,7 @@ namespace ChuniVController
             int width = grayCurrent.Width;
             int height = grayCurrent.Height;
             int zoneWidth = width / 6;
-            
+
             // Calculate deadzone (bottom X% of frame)
             int deadzoneHeight = (int)(height * _bottomDeadzonePercent / 100.0);
             int activeHeight = height - deadzoneHeight;
@@ -174,37 +174,53 @@ namespace ChuniVController
                 int bytesPerPixel = 3;
                 int stride = prevData.Stride;
 
+                // Count motion per column so we can decide whether a full 1/6th is occupied.
+                int[] columnMotionCounts = new int[width];
+
                 unsafe
                 {
                     byte* prevPtr = (byte*)prevData.Scan0;
                     byte* currPtr = (byte*)currData.Scan0;
 
+                    // Build column motion histogram for the active area (exclude deadzone rows)
+                    for (int y = 0; y < activeHeight; y++)
+                    {
+                        for (int x = 0; x < width; x++)
+                        {
+                            int offset = y * stride + x * bytesPerPixel;
+                            int diff = Math.Abs(currPtr[offset] - prevPtr[offset]);
+                            if (diff > _motionThreshold)
+                            {
+                                columnMotionCounts[x]++;
+                            }
+                        }
+                    }
+
+                    // Determine per-zone occupancy. A zone is considered occupied only when
+                    // a majority of its columns have a meaningful amount of motion. This
+                    // reduces cross-zone bleed when a hand straddles a boundary.
                     for (int zone = 0; zone < 6; zone++)
                     {
                         int startX = zone * zoneWidth;
                         int endX = (zone == 5) ? width : (zone + 1) * zoneWidth;
-                        int motionPixels = 0;
-                        int totalPixels = (endX - startX) * activeHeight;
+                        int zoneColumns = endX - startX;
 
-                        // Only process pixels above the deadzone
-                        for (int y = 0; y < activeHeight; y++)
+                        // A column is considered "active" if it has motion in at least
+                        // a small fraction of the active rows (e.g., 2%). This filters
+                        // single-pixel noise.
+                        int perColumnThreshold = Math.Max(1, (int)(activeHeight * 0.02));
+
+                        int activeColumns = 0;
+                        for (int x = startX; x < endX; x++)
                         {
-                            for (int x = startX; x < endX; x++)
-                            {
-                                int offset = y * stride + x * bytesPerPixel;
-                                
-                                // Compare grayscale values (R, G, B are same in grayscale)
-                                int diff = Math.Abs(currPtr[offset] - prevPtr[offset]);
-                                
-                                if (diff > _motionThreshold)
-                                {
-                                    motionPixels++;
-                                }
-                            }
+                            if (columnMotionCounts[x] >= perColumnThreshold)
+                                activeColumns++;
                         }
 
-                        double motionPercent = (double)motionPixels / totalPixels * 100.0;
-                        bool shouldBlock = motionPercent > 1.5;
+                        double activeColumnPercent = zoneColumns == 0 ? 0.0 : (double)activeColumns / zoneColumns * 100.0;
+
+                        // Require majority of columns in the zone to be active to count as occupied.
+                        bool shouldBlock = activeColumnPercent >= 50.0;
 
                         if (shouldBlock && !_irBlocked[zone])
                         {
