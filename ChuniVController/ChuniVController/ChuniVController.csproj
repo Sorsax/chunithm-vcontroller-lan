@@ -76,6 +76,7 @@
     </ApplicationDefinition>
     <Compile Include="ChuniIO.cs" />
     <Compile Include="WebcamIrService.cs" />
+    <Compile Include="ExternalInputService.cs" />
     <Compile Include="TouchPad.xaml.cs">
       <DependentUpon>TouchPad.xaml</DependentUpon>
     </Compile>

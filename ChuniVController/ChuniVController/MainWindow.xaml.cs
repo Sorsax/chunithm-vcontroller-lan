@@ -24,6 +24,7 @@ namespace ChuniVController
     {
         private readonly ChuniIO cio;
         private WebcamIrService webcamIrService;
+        private ExternalInputService externalInputService;
 
         private void handleRecv(ChuniIoMessage message)
         {
@@ -48,7 +49,12 @@ namespace ChuniVController
             // Initialize webcam IR service if enabled
             bool webcamEnabled = false;
             bool.TryParse(ConfigurationManager.AppSettings["WebcamEnabled"], out webcamEnabled);
-            
+            // Initialize external input (hand-tracker) if enabled
+            bool externalInputEnabled = false;
+            bool.TryParse(ConfigurationManager.AppSettings["ExternalInputEnabled"], out externalInputEnabled);
+            int externalInputPort = 24865;
+            int.TryParse(ConfigurationManager.AppSettings["ExternalInputPort"], out externalInputPort);
+
             if (webcamEnabled)
             {
                 int deviceIndex = 0;
@@ -68,6 +74,19 @@ namespace ChuniVController
                 else
                 {
                     MessageBox.Show("Failed to start webcam. Check device index and permissions.", "Webcam Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+
+            if (externalInputEnabled)
+            {
+                externalInputService = new ExternalInputService(cio, externalInputPort);
+                if (externalInputService.Start())
+                {
+                    MessageBox.Show($"External input listener started on UDP port {externalInputPort}", "External Input", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show("Failed to start external input listener.", "External Input Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
 
